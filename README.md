@@ -27,11 +27,17 @@ Project Structure
 Plaintext
 
 ├── connection_manager.py  # WebSocket connection routing (Room & User level)
+
 ├── crud.py                # Async database query helper functions
+
 ├── database.py            # Engine setup & SQLite PRAGMA configuration
+
 ├── index.html             # Single-page application UI & client logic
+
 ├── main.py                # FastAPI routes, file upload pipelines, WS logic
+
 ├── models.py              # SQLAlchemy ORM models (User, ChatRoom, Message, etc.)
+
 └── seed.py                # Database reset & initial user seeding script
 
 Quick Start
