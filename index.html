@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Chat</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%AC%3C/text%3E%3C/svg%3E" />
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0c12; --bg-side:#10141d; --bg-elev:#161b26; --bg-elev-2:#1c2230;
+    --bg-hover:#1f2635; --border:#232a39; --border-soft:#1a2030;
+    --fg:#e7eaf1; --fg-2:#a8afc0; --fg-3:#6d7689;
+    --accent:#6c5cff; --accent-2:#4f8eff; --accent-soft:rgba(108,92,255,0.15);
+    --accent-hover:#7d6eff; --accent-ring:rgba(108,92,255,0.35);
+    --danger:#ef4444; --danger-soft:rgba(239,68,68,0.12);
+    --success:#22c55e; --warn:#f59e0b; --read:#6ea8fe;
+    --bubble-other:#1c2230; --bubble-mine:#2b3f7a;
+    --r-sm:8px; --r-md:12px; --r-lg:16px; --r-xl:20px;
+    --shadow-1:0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.25);
+    --shadow-2:0 8px 24px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
+    --sidebar-w:320px; --header-h:64px;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--fg);-webkit-font-smoothing:antialiased;overflow:hidden}
+  button,input,textarea{font:inherit;color:inherit}
+  button{cursor:pointer;background:none;border:0;padding:0}
+  a{color:inherit;text-decoration:none}
+  input,textarea{background:#0b0e15;border:1px solid var(--border);border-radius:var(--r-md);
+                 padding:10px 14px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;width:100%}
+  input::placeholder,textarea::placeholder{color:var(--fg-3)}
+  input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring);background:#0d1018}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;padding:0 14px;
+       border-radius:var(--r-md);background:var(--bg-elev);color:var(--fg);font-weight:500;
+       transition:background .12s,transform .06s,color .12s;white-space:nowrap}
+  .btn:hover{background:var(--bg-hover)}
+  .btn:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+  .btn.primary{background:var(--accent);color:#fff}
+  .btn.primary:hover{background:var(--accent-hover)}
+  .btn.danger{background:var(--danger);color:#fff}
+  .btn.danger:hover{background:#ff5757}
+  .btn.icon{width:38px;padding:0;background:transparent;color:var(--fg-2)}
+  .btn.icon:hover{background:var(--bg-hover);color:var(--fg)}
+
+  #login{position:fixed;inset:0;display:grid;place-items:center;padding:24px;
+         background:radial-gradient(ellipse at top left,rgba(108,92,255,.14),transparent 50%),
+                    radial-gradient(ellipse at bottom right,rgba(79,142,255,.10),transparent 50%),var(--bg)}
+  #login .card{width:100%;max-width:380px;background:var(--bg-side);border:1px solid var(--border);
+               border-radius:var(--r-xl);padding:32px 28px 26px;box-shadow:var(--shadow-2);animation:fadeUp .35s ease}
+  #login .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+  #login .brand-mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+                     background:linear-gradient(135deg,var(--accent),var(--accent-2));
+                     box-shadow:0 8px 20px rgba(108,92,255,.35);font-size:22px}
+  #login h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+  #login .brand p{margin:2px 0 0;color:var(--fg-3);font-size:12.5px}
+  #login form{display:flex;flex-direction:column;gap:14px}
+  #login label{display:block;font-size:12.5px;color:var(--fg-2);margin-bottom:6px;font-weight:500}
+  #loginError{color:#ff8b7a;font-size:13px;min-height:18px}
+  #login .hint{margin-top:6px;padding:12px 14px;background:rgba(255,255,255,.02);
+               border:1px solid var(--border-soft);border-radius:var(--r-md);
+               font-size:12.5px;color:var(--fg-3);display:flex;flex-direction:column;gap:3px}
+  #login .hint strong{color:var(--fg-2);font-weight:500}
+  #login .hint code{background:rgba(255,255,255,.05);padding:1px 6px;border-radius:5px;
+                    font:12px ui-monospace,monospace;color:var(--fg)}
+  #login .auth-form.hidden{display:none}
+  #login .auth-switch{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:13px;color:var(--fg-2)}
+  #login .auth-switch .btn.link{background:none;color:var(--accent);padding:0;font-weight:500}
+  #login .auth-switch .btn.link:hover{text-decoration:underline}
+  
+  /* Password requirements */
+  .password-requirements{font-size:11px;color:var(--fg-3);margin-top:6px;display:flex;flex-direction:column;gap:2px}
+  .password-requirements .req{display:flex;align-items:center;gap:6px;transition:color .15s}
+  .password-requirements .req.met{color:var(--success)}
+  .password-requirements .req::before{content:"";width:12px;height:12px;border-radius:50%;border:1px solid var(--border);flex-shrink:0;transition:all .15s}
+  .password-requirements .req.met::before{background:var(--success);border-color:var(--success);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%23fff' d='M10 3L4.5 8.5 2 6' stroke='%23fff' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-position:center;background-repeat:no-repeat;background-size:8px}
+  
+  /* Input validation states */
+  input:invalid:not(:placeholder-shown){border-color:var(--danger)}
+  input:valid:not(:placeholder-shown){border-color:var(--success)}
+
+  #app{position:fixed;inset:0;display:grid;grid-template-columns:var(--sidebar-w) 1fr}
+  @media (max-width:780px){
+    #app{grid-template-columns:1fr}
+    aside{position:absolute;inset:0 auto 0 0;width:min(88%,320px);z-index:20;transform:translateX(-102%);
+          transition:transform .25s cubic-bezier(.22,.61,.36,1);box-shadow:0 0 40px rgba(0,0,0,.6)}
+    body.sidebar-open aside{transform:translateX(0)}
+    body.sidebar-open::after{content:"";position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:15;backdrop-filter:blur(2px)}
+  }
+
+  aside{background:var(--bg-side);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+  .sidebar-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;min-height:var(--header-h)}
+  .sidebar-head .me{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+  .sidebar-head .me .name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sidebar-head .me .status{font-size:11.5px;color:var(--success);display:flex;align-items:center;gap:5px}
+  .sidebar-head .me .status::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+  .search-wrap{padding:12px 14px 6px}
+  .search{position:relative}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg-3);pointer-events:none}
+  .search input{height:38px;padding-left:38px}
+  .sidebar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 14px 14px}
+  .sidebar-actions .btn{height:36px;font-size:13px;background:var(--bg-elev);border:1px solid var(--border)}
+  .sidebar-actions .btn:hover{background:var(--bg-hover);border-color:#2a3245}
+
+  #rooms{list-style:none;margin:0;padding:4px 8px 12px;overflow-y:auto;flex:1;min-height:0}
+  #rooms li{display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;
+            column-gap:10px;row-gap:1px;padding:10px 10px;border-radius:var(--r-md);cursor:pointer;
+            align-items:center;transition:background .1s;position:relative}
+  #rooms li + li{margin-top:2px}
+  #rooms li:hover{background:var(--bg-hover)}
+  #rooms li.active{background:var(--bg-elev-2)}
+  #rooms li.active::before{content:"";position:absolute;left:-8px;top:50%;transform:translateY(-50%);
+                            width:3px;height:22px;border-radius:0 3px 3px 0;
+                            background:linear-gradient(180deg,var(--accent),var(--accent-2))}
+  #rooms li .avatar{grid-row:1 / span 2}
+  #rooms li .rname{grid-column:2;grid-row:1;font-weight:500;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #rooms li.has-unread .rname{font-weight:600}
+  #rooms li .rsub{grid-column:2;grid-row:2;font-size:12px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #rooms li.has-unread .rsub{color:var(--fg-2)}
+  #rooms li .rtime{grid-column:3;grid-row:1;font-size:11px;color:var(--fg-3);white-space:nowrap}
+  #rooms li.has-unread .rtime{color:var(--accent-2)}
+  #rooms li .rbadge{grid-column:3;grid-row:2;justify-self:end;background:var(--accent);color:#fff;
+                    border-radius:999px;font-size:11px;font-weight:600;padding:1px 8px;min-width:20px;
+                    text-align:center;box-shadow:0 2px 8px rgba(108,92,255,.4)}
+  #rooms li.empty{display:block;cursor:default;text-align:center;padding:32px 16px;color:var(--fg-3);font-size:13px}
+  #rooms li.empty:hover{background:transparent}
+
+  .avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;font-weight:600;
+          color:#fff;flex-shrink:0;font-size:15px;letter-spacing:.02em;user-select:none}
+
+  main{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--bg);position:relative}
+  #roomHeader{min-height:var(--header-h);padding:0 16px;border-bottom:1px solid var(--border);
+              display:flex;align-items:center;gap:12px;background:rgba(10,12,18,.75);
+              backdrop-filter:blur(12px);z-index:5;position:relative}
+  #roomHeader .avatar{width:36px;height:36px;font-size:14px}
+  #roomHeader .room-info{flex:1;min-width:0;display:flex;flex-direction:column}
+  #roomHeader .room-title{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #roomHeader .room-sub{font-size:12px;color:var(--fg-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #roomHeader .empty{color:var(--fg-3);font-size:13.5px}
+  #roomHeader .header-actions{display:flex;gap:2px}
+  #roomHeader .icon-btn{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+                        color:var(--fg-2);transition:background .12s,color .12s}
+  #roomHeader .icon-btn:hover{background:var(--bg-hover);color:var(--fg)}
+
+  .hamburger{display:none}
+  @media (max-width:780px){.hamburger{display:grid}}
+
+  .menu-pop{position:absolute;top:52px;right:12px;background:var(--bg-elev);border:1px solid var(--border);
+            border-radius:var(--r-md);padding:6px;min-width:180px;box-shadow:var(--shadow-2);z-index:30;
+            animation:fadeDown .12s ease}
+  .menu-pop button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;
+                   font-size:13.5px;color:var(--fg);text-align:left}
+  .menu-pop button:hover{background:var(--bg-hover)}
+  .menu-pop button.danger{color:#ff8b7a}
+  .menu-pop button.danger:hover{background:var(--danger-soft)}
+  .menu-pop .sep{height:1px;background:var(--border);margin:4px 0}
+
+  #messages{flex:1;overflow-y:auto;padding:20px 20px 8px;display:flex;flex-direction:column}
+  #messages::-webkit-scrollbar{width:10px}
+  #messages::-webkit-scrollbar-track{background:transparent}
+  #messages::-webkit-scrollbar-thumb{background:#252b3a;border-radius:10px;border:2px solid var(--bg)}
+  #messages::-webkit-scrollbar-thumb:hover{background:#2f3648}
+
+  .day-sep{align-self:center;margin:18px 0 10px;padding:4px 12px;background:var(--bg-elev);
+           border:1px solid var(--border);border-radius:999px;font-size:11.5px;font-weight:500;
+           color:var(--fg-3);text-transform:uppercase;letter-spacing:.03em}
+  .day-sep:first-child{margin-top:2px}
+
+  .msg{position:relative;max-width:min(72%,620px);padding:8px 12px 6px;border-radius:16px;
+       background:var(--bubble-other);align-self:flex-start;margin-top:10px;
+       display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere;animation:msgIn .18s ease}
+  .msg.grouped{margin-top:2px}
+  .msg.mine{align-self:flex-end;background:var(--bubble-mine)}
+  .msg.pending{opacity:.65}
+  .msg.failed{outline:1px dashed var(--danger)}
+  .msg .sender{font-size:12px;font-weight:600;color:#9ec1ff;margin-bottom:2px;display:flex;align-items:center;gap:6px}
+  .msg .text{white-space:pre-wrap;font-size:14px;line-height:1.45}
+  .msg .msg-meta{display:flex;justify-content:flex-end;align-items:center;gap:5px;font-size:11px;
+                 color:var(--fg-3);margin-top:2px}
+  .msg.mine .msg-meta{color:#b8c9f0}
+  .msg .edited{font-style:italic;opacity:.7;font-size:10.5px}
+  .tick{font-family:ui-monospace,monospace;letter-spacing:-2px;font-size:12.5px}
+  .tick.read{color:var(--read)}
+  .tick.some{color:#98a4ba}
+
+  .msg .files{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+  .file-chip{display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.05);
+             border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:13px;
+             transition:background .12s,border-color .12s;overflow:hidden}
+  .file-chip:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.14)}
+  .msg.mine .file-chip{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.14)}
+  .file-chip .icon{width:32px;height:32px;flex:0 0 auto;display:grid;place-items:center;
+                   background:rgba(255,255,255,.06);border-radius:8px;font-size:16px}
+  .file-chip .info{flex:1;min-width:0;display:flex;flex-direction:column}
+  .file-chip .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+  .file-chip .size{color:var(--fg-3);font-size:11px;margin-top:1px}
+  .file-chip img.thumb{width:34px;height:34px;border-radius:8px;object-fit:cover;flex:0 0 auto}
+
+  .msg-actions{position:absolute;top:-14px;right:8px;display:flex;gap:2px;padding:3px;
+               background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;
+               opacity:0;pointer-events:none;transition:opacity .12s;box-shadow:var(--shadow-1);z-index:2}
+  .msg:hover .msg-actions,.msg:focus-within .msg-actions{opacity:1;pointer-events:auto}
+  .msg-actions button{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;
+                      color:var(--fg-2);font-size:13px}
+  .msg-actions button:hover{background:var(--bg-hover);color:var(--fg)}
+  .msg-actions button.del:hover{background:var(--danger-soft);color:#ff8b7a}
+
+  .edit-wrap{display:flex;flex-direction:column;gap:6px;width:100%}
+  .edit-input{min-height:44px;resize:vertical;background:#0b0e15;border-color:var(--accent);font-size:14px}
+  .edit-hint{font-size:11.5px;color:var(--fg-3);display:flex;justify-content:space-between}
+  .edit-hint kbd{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px;
+                 font:11px ui-monospace,monospace;color:var(--fg-2)}
+
+  .skeleton{max-width:min(72%,620px);padding:12px 14px;border-radius:16px;
+            background:var(--bubble-other);display:flex;flex-direction:column;gap:8px;animation:pulse 1.4s infinite}
+  .skeleton.mine{align-self:flex-end;background:var(--bubble-mine)}
+  .skeleton .line{height:10px;border-radius:5px;background:rgba(255,255,255,.06)}
+  .skeleton .line.w1{width:60%}
+  .skeleton .line.w2{width:40%}
+
+  .empty-state{flex:1;display:grid;place-items:center;padding:40px 24px;text-align:center}
+  .empty-state .inner{max-width:340px}
+  .empty-state .art{width:88px;height:88px;border-radius:24px;display:grid;place-items:center;margin:0 auto 18px;
+                    background:linear-gradient(135deg,rgba(108,92,255,.12),rgba(79,142,255,.08));
+                    border:1px solid rgba(108,92,255,.18);font-size:38px}
+  .empty-state h2{font-size:16px;font-weight:600;margin:0 0 6px}
+  .empty-state p{font-size:13.5px;color:var(--fg-3);margin:0 0 18px;line-height:1.5}
+
+  main footer{border-top:1px solid var(--border);padding:12px 16px 16px;display:flex;flex-direction:column;
+              gap:8px;background:var(--bg)}
+  .composer-row{display:flex;align-items:flex-end;gap:8px}
+  #input{flex:1;resize:none;min-height:44px;max-height:160px;height:44px;padding:11px 14px;
+         line-height:1.4;border-radius:14px}
+  #sendBtn{height:44px;width:44px;border-radius:14px;padding:0;background:var(--accent);color:#fff;
+           display:grid;place-items:center;transition:background .12s,transform .06s;
+           box-shadow:0 4px 14px rgba(108,92,255,.35)}
+  #sendBtn:hover{background:var(--accent-hover)}
+  #sendBtn:active{transform:scale(.96)}
+  #sendBtn:disabled{background:var(--bg-elev);color:var(--fg-3);box-shadow:none}
+  #attachBtn{height:44px;width:44px;border-radius:14px;background:var(--bg-elev);color:var(--fg-2);
+             display:grid;place-items:center}
+  #attachBtn:hover{background:var(--bg-hover);color:var(--fg)}
+
+  .preview{display:flex;flex-wrap:wrap;gap:8px}
+  .preview .chip{display:flex;align-items:center;gap:8px;background:var(--bg-elev);border:1px solid var(--border);
+                 border-radius:10px;padding:6px 8px 6px 10px;font-size:12.5px;max-width:240px}
+  .preview .chip .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+  .preview .chip .x{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+                    color:var(--fg-3);font-size:14px;flex-shrink:0}
+  .preview .chip .x:hover{background:var(--danger-soft);color:#ff8b7a}
+  .preview .chip img{width:26px;height:26px;border-radius:6px;object-fit:cover;flex-shrink:0}
+
+  #scrollBtn{position:absolute;right:20px;bottom:96px;height:40px;min-width:40px;padding:0 12px;
+             border-radius:999px;background:var(--bg-elev);border:1px solid var(--border);color:var(--fg);
+             display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;
+             box-shadow:var(--shadow-2);opacity:0;transform:translateY(10px) scale(.9);
+             pointer-events:none;transition:opacity .18s,transform .18s;z-index:6}
+  #scrollBtn.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+  #scrollBtn .dot{background:var(--accent);color:#fff;border-radius:999px;padding:0 7px;
+                  font-size:11px;font-weight:600;min-width:18px;text-align:center;height:18px;
+                  display:grid;place-items:center}
+
+  .modal-back{position:fixed;inset:0;z-index:100;background:rgba(4,6,12,.65);backdrop-filter:blur(6px);
+              display:grid;place-items:center;padding:20px;animation:fadeIn .15s ease}
+  .modal{background:var(--bg-side);border:1px solid var(--border);border-radius:var(--r-xl);padding:22px;
+         width:100%;max-width:420px;max-height:86vh;display:flex;flex-direction:column;gap:14px;
+         box-shadow:var(--shadow-2);animation:fadeUp .2s ease}
+  .modal.small{max-width:380px;gap:12px}
+  .modal h2{margin:0;font-size:16px;font-weight:600}
+  .modal p.modal-body{margin:0;font-size:13.5px;color:var(--fg-2);line-height:1.5}
+  .modal .field{display:flex;flex-direction:column;gap:6px}
+  .modal .field label{font-size:12.5px;color:var(--fg-2);font-weight:500}
+  .modal .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+  .modal .modal-actions .btn{min-width:90px}
+
+  .userlist{max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--r-md);background:#0b0e15}
+  .userlist::-webkit-scrollbar{width:8px}
+  .userlist::-webkit-scrollbar-thumb{background:#252b3a;border-radius:8px}
+  .userlist .user-row{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;
+                      border-bottom:1px solid var(--border-soft);transition:background .1s}
+  .userlist .user-row:last-child{border-bottom:0}
+  .userlist .user-row:hover{background:var(--bg-hover)}
+  .userlist .user-row .name{flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .userlist .user-row input{width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
+  .userlist .user-row.picked{background:var(--accent-soft)}
+  .userlist .empty{padding:24px;text-align:center;color:var(--fg-3);font-size:13px}
+
+  #toasts{position:fixed;top:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:200;pointer-events:none}
+  @media (max-width:500px){#toasts{left:16px;right:16px;top:16px}}
+  .toast{background:var(--bg-elev);border:1px solid var(--border);border-left:3px solid var(--accent);
+         border-radius:var(--r-md);padding:12px 16px;min-width:260px;max-width:380px;font-size:13.5px;
+         box-shadow:var(--shadow-2);opacity:0;transform:translateX(16px);
+         transition:opacity .2s,transform .2s;pointer-events:auto}
+  .toast.in{opacity:1;transform:translateX(0)}
+  .toast.success{border-left-color:var(--success)}
+  .toast.error{border-left-color:var(--danger)}
+  .toast.warn{border-left-color:var(--warn)}
+
+  .hidden{display:none!important}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{50%{opacity:.6}}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="card">
+    <div class="brand">
+      <div class="brand-mark">💬</div>
+      <div><h1>Chat</h1><p id="authTitle">Sign in to continue</p></div>
+    </div>
+    
+    <!-- Login Form -->
+    <form id="loginForm" class="auth-form">
+      <div>
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div>
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" placeholder="Enter your password" required autocomplete="current-password" />
+      </div>
+      <button class="btn primary" type="submit" style="height:42px">Sign in</button>
+      <div id="loginError" class="error"></div>
+    </form>
+    
+    <!-- Register Form -->
+    <form id="registerForm" class="auth-form hidden">
+      <div>
+        <label for="registerUsername">Username</label>
+        <input id="registerUsername" placeholder="Choose a username" required autocomplete="username" minlength="3" maxlength="30" pattern="^[a-zA-Z][a-zA-Z0-9_]*$" />
+      </div>
+      <div>
+        <label for="registerEmail">Email</label>
+        <input id="registerEmail" type="email" placeholder="you@example.com" required autocomplete="email" />
+      </div>
+      <div>
+        <label for="registerPassword">Password</label>
+        <input id="registerPassword" type="password" placeholder="Create a password" required autocomplete="new-password" minlength="8" />
+        <div class="password-requirements" id="passwordRequirements"></div>
+      </div>
+      <div>
+        <label for="registerConfirmPassword">Confirm Password</label>
+        <input id="registerConfirmPassword" type="password" placeholder="Confirm your password" required autocomplete="new-password" />
+      </div>
+      <button class="btn primary" type="submit" style="height:42px">Create Account</button>
+      <div id="registerError" class="error"></div>
+    </form>
+    
+    <div class="auth-switch">
+      <span id="authSwitchText">Don't have an account?</span>
+      <button type="button" class="btn link" id="authSwitchBtn">Sign up</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <aside>
+    <div class="sidebar-head">
+      <div class="me">
+        <div class="avatar" id="meAvatar">?</div>
+        <div style="min-width:0;flex:1">
+          <div class="name" id="meName">…</div>
+          <div class="status">online</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button class="btn icon" id="profileBtn" title="My Profile" aria-label="My Profile">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </button>
+        <button class="btn icon" id="logout" title="Sign out" aria-label="Sign out">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="roomSearch" placeholder="Search conversations…" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn" id="newDmBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>
+        New DM
+      </button>
+      <button class="btn" id="newGroupBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        New Group
+      </button>
+    </div>
+
+    <ul id="rooms"></ul>
+  </aside>
+
+  <main>
+    <header id="roomHeader"><span class="empty">Select a conversation</span></header>
+    <div id="messages"></div>
+
+    <button id="scrollBtn" aria-label="Scroll to bottom">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      <span>Latest</span>
+      <span class="dot" id="scrollCount" style="display:none">0</span>
+    </button>
+
+    <footer>
+      <div id="preview" class="preview"></div>
+      <div class="composer-row">
+        <input type="file" id="file" hidden multiple />
+        <button class="btn icon" id="attachBtn" disabled title="Attach files" aria-label="Attach files">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <textarea id="input" placeholder="Select a conversation…" disabled rows="1"></textarea>
+        <button id="sendBtn" disabled title="Send" aria-label="Send">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<!-- User Search Modal (for New DM/Group) -->
+<div id="userSearchModal" class="modal-back hidden">
+  <div class="modal" style="max-width:500px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2 id="userSearchModalTitle">Select User</h2>
+      <button class="btn icon" id="closeUserSearchModal" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="userSearchInput" placeholder="Search by username…" autocomplete="off" />
+    </div>
+    <div id="userSearchResults" class="userlist" style="max-height:300px"></div>
+    <div id="userSearchEmpty" class="empty" style="display:none;padding:24px;text-align:center;color:var(--fg-3)">No users found</div>
+  </div>
+</div>
+
+<!-- User Profile Modal -->
+<div id="userProfileModal" class="modal-back hidden">
+  <div class="modal" style="max-width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2>Profile</h2>
+      <button class="btn icon" id="closeUserProfileModal" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+      <div class="avatar" id="profileAvatar" style="width:80px;height:80px;font-size:32px"></div>
+      <div>
+        <div id="profileDisplayName" style="font-size:18px;font-weight:600"></div>
+        <div id="profileUsername" style="font-size:13px;color:var(--fg-3)"></div>
+      </div>
+      <div id="profileBio" style="font-size:14px;color:var(--fg-2);max-width:100%;word-wrap:break-word"></div>
+      <div style="font-size:12px;color:var(--fg-3)" id="profileJoined"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:8px">
+      <button class="btn primary" id="openEditProfileBtn">Edit Profile</button>
+      <button class="btn" id="startDmFromProfileBtn">Message</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="editProfileModal" class="modal-back hidden">
+  <div class="modal" style="max-width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h2>Edit Profile</h2>
+      <button class="btn icon" id="closeEditProfileModal" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form id="editProfileForm">
+      <div class="field">
+        <label for="editDisplayName">Display Name</label>
+        <input id="editDisplayName" type="text" placeholder="Your name" maxlength="50" />
+        <span style="font-size:11px;color:var(--fg-3)">Leave empty to use username</span>
+      </div>
+      <div class="field">
+        <label for="editBio">Bio</label>
+        <textarea id="editBio" placeholder="Tell something about yourself…" maxlength="500" rows="3"></textarea>
+        <span style="font-size:11px;color:var(--fg-3)" id="bioCharCount">0/500</span>
+      </div>
+      <div class="field">
+        <label for="editAvatarUrl">Avatar URL</label>
+        <input id="editAvatarUrl" type="url" placeholder="https://example.com/avatar.png" />
+        <span style="font-size:11px;color:var(--fg-3)">Direct link to an image</span>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="cancelEditProfile">Cancel</button>
+        <button type="submit" class="btn primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+/* =====================================================================
+   Global error boundary — never let a stray error kill the UI silently.
+   ===================================================================== */
+window.addEventListener('error', (e) => {
+  console.error('Unhandled error:', e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('Unhandled rejection:', e.reason);
+});
+
+/* =====================================================================
+   DOM helpers
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+
+/**
+ * Small helper: el('div', {class:'x'}, 'text', childNode, ...)
+ * Tolerates null/undefined attrs (default params DON'T fire on null!).
+ */
+const el = (tag, attrs, ...children) => {
+  const node = document.createElement(tag);
+  const a = attrs || {};
+  for (const [k, v] of Object.entries(a)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(node.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const c of children) {
+    if (c == null || c === false) continue;
+    node.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
+  }
+  return node;
+};
+
+const svgIcon = (path, size = 16) => {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', size);
+  svg.setAttribute('height', size);
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', path);
+  svg.appendChild(p);
+  return svg;
+};
+
+/* =====================================================================
+   Formatting & small utilities
+   ===================================================================== */
+const TZ = 'Asia/Tashkent';
+const MAX_FILES = 5;
+const TOKEN_KEY = 'chat.token';
+
+const timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' });
+const dtFmt   = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+const dayFmt  = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: '2-digit', month: 'short' });
+const wdFmt   = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'long' });
+const isoDay  = new Intl.DateTimeFormat('en-CA', { timeZone: TZ });
+
+function dayKey(d) { try { return isoDay.format(new Date(d)); } catch { return ''; } }
+
+function formatTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const today = isoDay.format(new Date());
+    return isoDay.format(d) === today ? timeFmt.format(d) : dtFmt.format(d);
+  } catch { return ''; }
+}
+
+function dayLabel(d) {
+  try {
+    const now = new Date();
+    const target = new Date(d);
+    const t0 = new Date(dayKey(now));
+    const t1 = new Date(dayKey(target));
+    const diff = Math.round((t0 - t1) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return wdFmt.format(target);
+    return dayFmt.format(target);
+  } catch { return ''; }
+}
+
+function shortRelTime(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMin = Math.floor((now - d) / 60000);
+    if (diffMin < 1) return 'now';
+    if (diffMin < 60) return diffMin + 'm';
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24 && dayKey(d) === dayKey(now)) return diffH + 'h';
+    const days = Math.round((new Date(dayKey(now)) - new Date(dayKey(d))) / 86400000);
+    if (days < 7) return wdFmt.format(d).slice(0, 3);
+    return dayFmt.format(d);
+  } catch { return ''; }
+}
+
+function fileIcon(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (/^(png|jpe?g|gif|webp|avif|bmp|svg|heic)$/.test(ext)) return '🖼️';
+  if (/^(mp4|webm|mov|avi|mkv)$/.test(ext))               return '🎬';
+  if (/^(mp3|wav|ogg|flac|m4a)$/.test(ext))               return '🎵';
+  if (ext === 'pdf')                                      return '📕';
+  if (/^(zip|rar|7z|tar|gz|bz2)$/.test(ext))              return '🗜️';
+  if (/^(docx?)$/.test(ext))                              return '📄';
+  if (/^(xlsx?|csv)$/.test(ext))                          return '📊';
+  if (/^(pptx?)$/.test(ext))                              return '📽️';
+  if (/^(txt|md|log)$/.test(ext))                         return '📝';
+  if (/^(js|ts|py|html|css|json|yml|yaml|sh)$/.test(ext)) return '📜';
+  return '📎';
+}
+function isImage(name) { return /\.(png|jpe?g|gif|webp|avif|bmp|svg|heic)$/i.test(name); }
+
+function humanSize(n) {
+  if (!n) return '';
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function userColor(name) {
+  let h = 0;
+  for (const c of (name || '?')) h = (h * 31 + c.charCodeAt(0)) | 0;
+  const hue = Math.abs(h) % 360;
+  return `linear-gradient(135deg, hsl(${hue},62%,52%), hsl(${(hue + 30) % 360},62%,46%))`;
+}
+
+function avatarFor(name, size = 38) {
+  const a = el('div', { class: 'avatar' });
+  a.style.background = userColor(name);
+  a.style.width = a.style.height = size + 'px';
+  a.style.fontSize = Math.round(size * 0.4) + 'px';
+  a.textContent = ((name || '?')[0] || '?').toUpperCase();
+  return a;
+}
+
+/* =====================================================================
+   Toasts & confirm
+   ===================================================================== */
+function toast(message, type = 'info', duration = 3500) {
+  try {
+    const box = $('toasts');
+    const t = el('div', { class: 'toast ' + type }, String(message || ''));
+    box.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('in'));
+    setTimeout(() => {
+      t.classList.remove('in');
+      setTimeout(() => t.remove(), 220);
+    }, duration);
+  } catch (e) { console.error('toast failed:', e); }
+}
+
+function askConfirm(message, { title = 'Confirm', okText = 'OK', danger = false } = {}) {
+  return new Promise((resolve) => {
+    const back = el('div', { class: 'modal-back' });
+    const modal = el('div', { class: 'modal small' });
+    modal.appendChild(el('h2', {}, title));
+    modal.appendChild(el('p', { class: 'modal-body' }, String(message || '')));
+    const actions = el('div', { class: 'modal-actions' });
+    const cancel = el('button', { class: 'btn' }, 'Cancel');
+    const ok = el('button', { class: 'btn ' + (danger ? 'danger' : 'primary') }, okText);
+
+    const close = (v) => { back.remove(); resolve(v); };
+    cancel.addEventListener('click', () => close(false));
+    ok.addEventListener('click', () => close(true));
+    back.addEventListener('click', (e) => { if (e.target === back) close(false); });
+
+    actions.append(cancel, ok);
+    modal.appendChild(actions);
+    back.appendChild(modal);
+    document.body.appendChild(back);
+    setTimeout(() => ok.focus(), 30);
+  });
+}
+
+/* =====================================================================
+   State
+   ===================================================================== */
+const state = {
+  token: sessionStorage.getItem(TOKEN_KEY) || '',
+  me: null,
+  rooms: [],
+  activeRoomId: null,
+  activeOthers: 0,
+  ws: null,
+  userWs: null,
+  seenIds: new Set(),
+  msgEls: new Map(),   // message_id -> { el, data, tickEl }
+  pendingFiles: [],
+  unread: {},
+  roomPreview: {},
+  lastMsgContext: null,
+  lastDayKey: null,
+  newWhileScrolled: 0,
+  roomQuery: '',
+  pendingSend: false,
+  userSearchMode: null,  // 'dm' | 'group'
+  selectedUserIds: new Set(),
+};
+
+/* =====================================================================
+   API
+   ===================================================================== */
+async function api(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
+  headers['Authorization'] = 'Bearer ' + state.token;
+  const res = await fetch(path, { ...opts, headers });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = await res.text(); } catch {}
+    throw new Error(`${res.status} ${detail || res.statusText}`);
+  }
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('application/json') ? res.json() : res.text();
+}
+
+/* =====================================================================
+   Authentication
+   ===================================================================== */
+
+// Password requirements configuration
+const PASSWORD_REQUIREMENTS = [
+  { id: 'length', text: 'At least 8 characters', check: (p) => p.length >= 8 },
+  { id: 'upper', text: 'One uppercase letter', check: (p) => /[A-Z]/.test(p) },
+  { id: 'lower', text: 'One lowercase letter', check: (p) => /[a-z]/.test(p) },
+  { id: 'digit', text: 'One number', check: (p) => /\d/.test(p) },
+  { id: 'special', text: 'One special character', check: (p) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+];
+
+// Initialize password requirements UI
+function initPasswordRequirements() {
+  const container = $('passwordRequirements');
+  if (!container) return;
+  container.innerHTML = PASSWORD_REQUIREMENTS.map(req => 
+    `<div class="req" id="req-${req.id}"><span>${req.text}</span></div>`
+  ).join('');
+}
+
+// Update password requirements display
+function updatePasswordRequirements(password) {
+  PASSWORD_REQUIREMENTS.forEach(req => {
+    const el = $(`req-${req.id}`);
+    if (el) {
+      if (req.check(password)) {
+        el.classList.add('met');
+      } else {
+        el.classList.remove('met');
+      }
+    }
+  });
+}
+
+// Check if all password requirements are met
+function checkPasswordRequirements(password) {
+  return PASSWORD_REQUIREMENTS.every(req => req.check(password));
+}
+
+// Switch between login and register forms
+function switchAuthMode(mode) {
+  const isRegister = mode === 'register';
+  $('loginForm').classList.toggle('hidden', isRegister);
+  $('registerForm').classList.toggle('hidden', !isRegister);
+  $('authTitle').textContent = isRegister ? 'Create your account' : 'Sign in to continue';
+  $('authSwitchText').textContent = isRegister ? 'Already have an account?' : 'Don\'t have an account?';
+  $('authSwitchBtn').textContent = isRegister ? 'Sign in' : 'Sign up';
+  $('loginError').textContent = '';
+  $('registerError').textContent = '';
+}
+
+// Auth switch button
+$('authSwitchBtn').addEventListener('click', () => {
+  const isRegister = $('loginForm').classList.contains('hidden');
+  switchAuthMode(isRegister ? 'login' : 'register');
+});
+
+// Password input validation
+$('registerPassword').addEventListener('input', (e) => {
+  updatePasswordRequirements(e.target.value);
+});
+
+// Register form submission
+$('registerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('registerError').textContent = '';
+  
+  const username = $('registerUsername').value.trim();
+  const email = $('registerEmail').value.trim();
+  const password = $('registerPassword').value;
+  const confirmPassword = $('registerConfirmPassword').value;
+  
+  const btn = e.target.querySelector('button[type=submit]');
+  
+  // Client-side validation
+  if (password !== confirmPassword) {
+    $('registerError').textContent = 'Passwords do not match';
+    return;
+  }
+  
+  if (!checkPasswordRequirements(password)) {
+    $('registerError').textContent = 'Password does not meet all requirements';
+    return;
+  }
+  
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.detail || 'Registration failed');
+    }
+    
+    // Store token and user info
+    state.token = data.token;
+    state.me = data.user;
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    
+    showApp();
+  } catch (err) {
+    $('registerError').textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+});
+
+// Login form submission
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('loginError').textContent = '';
+  
+  const email = $('loginEmail').value.trim();
+  const password = $('loginPassword').value;
+  
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      throw new Error(data.detail || 'Login failed');
+    }
+    
+    // Store token and user info
+    state.token = data.token;
+    state.me = data.user;
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    
+    showApp();
+  } catch (err) {
+    $('loginError').textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+});
+
+$('logout').addEventListener('click', async () => {
+  if (!await askConfirm('Sign out of this session?', { title: 'Sign out', okText: 'Sign out' })) return;
+  sessionStorage.removeItem(TOKEN_KEY);
+  try { state.ws?.close(); } catch {}
+  try { state.userWs?.close(); } catch {}
+  location.reload();
+});
+
+function showApp() {
+  $('login').classList.add('hidden');
+  $('app').classList.remove('hidden');
+  $('meName').textContent = state.me.username;
+  const av = $('meAvatar');
+  av.textContent = (state.me.username[0] || '?').toUpperCase();
+  av.style.background = userColor(state.me.username);
+  openUserWs();
+  loadRooms();
+}
+
+// Initialize password requirements on page load
+initPasswordRequirements();
+
+/* =====================================================================
+   Sidebar
+   ===================================================================== */
+$('roomSearch').addEventListener('input', (e) => {
+  state.roomQuery = e.target.value.trim().toLowerCase();
+  renderRooms();
+});
+
+document.addEventListener('click', (e) => {
+  const burger = e.target.closest('#openSidebarBtn, .hamburger');
+  if (burger && window.innerWidth <= 780) {
+    document.body.classList.toggle('sidebar-open');
+    e.stopPropagation();
+    return;
+  }
+  if (!document.body.classList.contains('sidebar-open')) return;
+  if (e.target.closest('aside')) return;
+  document.body.classList.remove('sidebar-open');
+}, true);
+
+async function loadRooms() {
+  try {
+    state.rooms = await api('/api/rooms');
+    for (const r of state.rooms) state.unread[r.id] = r.unread || 0;
+    renderRooms();
+  } catch (err) {
+    toast('Could not load conversations: ' + err.message, 'error');
+  }
+}
+
+function filteredRooms() {
+  if (!state.roomQuery) return state.rooms;
+  return state.rooms.filter(r => {
+    if ((r.display || '').toLowerCase().includes(state.roomQuery)) return true;
+    return (r.participants || []).some(p => (p.username || '').toLowerCase().includes(state.roomQuery));
+  });
+}
+
+function renderRooms() {
+  const ul = $('rooms');
+  ul.innerHTML = '';
+  const list = filteredRooms();
+
+  if (!state.rooms.length) {
+    const li = el('li', { class: 'empty' });
+    li.innerHTML = '<div style="font-size:32px;margin-bottom:8px;opacity:.4">💬</div>Create a DM or Group to get started.';
+    ul.appendChild(li);
+    return;
+  }
+  if (!list.length) {
+    ul.appendChild(el('li', { class: 'empty' }, `No matches for "${state.roomQuery}"`));
+    return;
+  }
+
+  for (const r of list) {
+    const li = el('li');
+    if (r.id === state.activeRoomId) li.classList.add('active');
+    const unread = state.unread[r.id] || 0;
+    if (unread > 0) li.classList.add('has-unread');
+
+    li.appendChild(avatarFor(r.display));
+
+    li.appendChild(el('div', { class: 'rname' }, r.display || ''));
+
+    const prev = state.roomPreview[r.id];
+    let subText;
+    if (prev) {
+      const who = prev.sender_id === state.me.id ? 'You' : (prev.sender || '?');
+      const body = prev.message
+        ? prev.message
+        : ((prev.files && prev.files.length)
+            ? `📎 ${prev.files.length} file${prev.files.length > 1 ? 's' : ''}`
+            : '');
+      subText = `${who}: ${body}`;
+    } else {
+      subText = r.type === 'group'
+        ? `Group · ${(r.participants || []).length} members`
+        : 'Direct message';
+    }
+    li.appendChild(el('div', { class: 'rsub' }, subText));
+
+    li.appendChild(el('div', { class: 'rtime' }, prev?.timestamp ? shortRelTime(prev.timestamp) : ''));
+
+    if (unread > 0) li.appendChild(el('div', { class: 'rbadge' }, String(unread)));
+
+    li.addEventListener('click', () => {
+      document.body.classList.remove('sidebar-open');
+      selectRoom(r.id);
+    });
+    ul.appendChild(li);
+  }
+}
+
+/* =====================================================================
+   Room selection
+   ===================================================================== */
+async function selectRoom(roomId) {
+  // Tear down old WS without triggering its reconnect logic
+  if (state.ws) {
+    const old = state.ws;
+    state.ws = null;
+    try { old.close(); } catch {}
+  }
+
+  state.activeRoomId = roomId;
+  state.seenIds = new Set();
+  state.msgEls = new Map();
+  state.pendingFiles = [];
+  state.unread[roomId] = 0;
+  state.lastMsgContext = null;
+  state.lastDayKey = null;
+  state.newWhileScrolled = 0;
+  updateScrollBtn();
+  renderPreview();
+  $('messages').innerHTML = '';
+  showSkeleton();
+
+  const room = state.rooms.find(r => r.id === roomId);
+  state.activeOthers = room ? Math.max(0, (room.participants || []).length - 1) : 0;
+  renderRooms();
+  renderRoomHeader(room || null);
+
+  document.body.classList.add('has-room');
+  $('input').disabled = false;
+  $('sendBtn').disabled = false;
+  $('attachBtn').disabled = false;
+  $('input').placeholder = 'Type a message…';
+  autosize();
+  $('input').focus();
+
+  openWs(roomId);
+
+  let msgs = [];
+  try {
+    msgs = await api(`/api/rooms/${roomId}/messages`);
+  } catch (err) {
+    console.error('history load failed:', err);
+    toast('Could not load history: ' + err.message, 'error');
+  }
+
+  $('messages').innerHTML = '';
+  if (!msgs.length) {
+    showRoomEmptyState();
+  } else {
+    for (const m of msgs) {
+      try { appendMessage(m, false); }
+      catch (e) { console.error('render failed for message', m.id, e); }
+    }
+    requestAnimationFrame(() => { $('messages').scrollTop = $('messages').scrollHeight; });
+  }
+
+  const lastOther = [...msgs].reverse().find(m => m.sender_id !== state.me.id);
+  if (lastOther) sendMarkRead(lastOther.id);
+}
+
+function deselectRoom() {
+  if (state.ws) { const old = state.ws; state.ws = null; try { old.close(); } catch {} }
+  state.activeRoomId = null;
+  state.activeOthers = 0;
+  state.seenIds = new Set();
+  state.msgEls = new Map();
+  state.pendingFiles = [];
+  renderPreview();
+  $('messages').innerHTML = '';
+  renderRoomHeader(null);
+  $('input').disabled = true;
+  $('sendBtn').disabled = true;
+  $('attachBtn').disabled = true;
+  $('input').placeholder = 'Select a conversation…';
+  document.body.classList.remove('has-room');
+  renderRooms();
+}
+
+function showSkeleton() {
+  const box = $('messages');
+  for (let i = 0; i < 4; i++) {
+    const sk = el('div', { class: 'skeleton' + (i % 2 === 1 ? ' mine' : '') });
+    sk.appendChild(el('div', { class: 'line w1' }));
+    sk.appendChild(el('div', { class: 'line w2' }));
+    box.appendChild(sk);
+  }
+}
+
+function showRoomEmptyState() {
+  const box = $('messages');
+  const wrap = el('div', { class: 'empty-state' });
+  const inner = el('div', { class: 'inner' });
+  inner.appendChild(el('div', { class: 'art' }, '👋'));
+  inner.appendChild(el('h2', {}, 'Say hi!'));
+  inner.appendChild(el('p', {}, 'No messages yet. Start the conversation by typing below.'));
+  wrap.appendChild(inner);
+  box.appendChild(wrap);
+}
+
+/* =====================================================================
+   Room header
+   ===================================================================== */
+function renderRoomHeader(room) {
+  const h = $('roomHeader');
+  h.innerHTML = '';
+
+  if (!room) {
+    h.appendChild(el('span', { class: 'empty' }, 'Select a conversation'));
+    return;
+  }
+
+  // For direct messages, make the other user clickable to view profile
+  if (room.type === 'direct') {
+    const other = (room.participants || []).find(p => p.id !== state.me.id);
+    if (other) {
+      const av = avatarFor(other.display_name || other.username, 36);
+      if (other.avatar_url) {
+        av.style.background = 'transparent';
+        av.innerHTML = `<img src="${other.avatar_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+      }
+      av.style.cursor = 'pointer';
+      av.title = 'View profile';
+      av.addEventListener('click', () => openUserProfile(other.id));
+      h.appendChild(av);
+
+      const info = el('div', { class: 'room-info', style: 'cursor:pointer' });
+      info.title = 'View profile';
+      info.addEventListener('click', () => openUserProfile(other.id));
+      info.appendChild(el('div', { class: 'room-title' }, other.display_name || other.username));
+      info.appendChild(el('div', { class: 'room-sub' }, 'Direct message'));
+      h.appendChild(info);
+    } else {
+      // Fallback
+      const av = avatarFor(room.display, 36);
+      h.appendChild(av);
+      const info = el('div', { class: 'room-info' });
+      info.appendChild(el('div', { class: 'room-title' }, room.display || ''));
+      info.appendChild(el('div', { class: 'room-sub' }, 'Direct message'));
+      h.appendChild(info);
+    }
+  } else {
+    // Group chat
+    const av = avatarFor(room.display, 36);
+    h.appendChild(av);
+
+    const info = el('div', { class: 'room-info' });
+    info.appendChild(el('div', { class: 'room-title' }, room.display || ''));
+    const sub = `${(room.participants || []).length} members`;
+    info.appendChild(el('div', { class: 'room-sub' }, sub));
+    h.appendChild(info);
+
+    const actions = el('div', { class: 'header-actions' });
+    const kebab = el('button', { class: 'icon-btn', 'aria-label': 'Group actions' });
+    kebab.appendChild(svgIcon('M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z M12 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z M12 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z', 20));
+    kebab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openHeaderMenu(kebab, room);
+    });
+    actions.appendChild(kebab);
+    h.appendChild(actions);
+  }
+}
+
+function openHeaderMenu(anchor, room) {
+  document.querySelectorAll('.menu-pop').forEach(x => x.remove());
+  const pop = el('div', { class: 'menu-pop' });
+
+  if (room.owner_id === state.me.id) {
+    const ren = el('button', {}, '✏️  Rename group');
+    ren.addEventListener('click', () => { pop.remove(); renameGroupFlow(room); });
+    pop.appendChild(ren);
+    pop.appendChild(el('div', { class: 'sep' }));
+    const del = el('button', { class: 'danger' }, '🗑️  Delete group');
+    del.addEventListener('click', () => { pop.remove(); deleteGroupFlow(room); });
+    pop.appendChild(del);
+  } else {
+    const leave = el('button', { class: 'danger' }, '🚪  Leave group');
+    leave.addEventListener('click', () => { pop.remove(); leaveGroupFlow(room); });
+    pop.appendChild(leave);
+  }
+
+  $('roomHeader').appendChild(pop);
+  setTimeout(() => {
+    const close = (ev) => {
+      if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', close); }
+    };
+    document.addEventListener('click', close);
+  }, 0);
+}
+
+/* =====================================================================
+   WebSockets (receiving only)
+   ===================================================================== */
+let roomWsRetry = null;
+let roomWsAttempts = 0;
+
+function openWs(roomId) {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${proto}://${location.host}/ws/chat/${roomId}?token=${encodeURIComponent(state.token)}`;
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { console.error('WS open failed:', e); return; }
+  state.ws = ws;
+
+  ws.onopen = () => {
+    roomWsAttempts = 0;
+    // if we queued any pending sends, they've already been sent via HTTP — no-op here
+  };
+
+  ws.onmessage = (ev) => {
+    let d;
+    try { d = JSON.parse(ev.data); } catch { return; }
+    try {
+      if (d.type === 'message' && d.room_id === state.activeRoomId) {
+        appendMessage(d, true);
+        if (d.sender_id !== state.me.id) sendMarkRead(d.id);
+      } else if (d.type === 'read_receipt' && d.room_id === state.activeRoomId) {
+        applyReadReceipt(d.reader_id, d.last_read_message_id);
+      } else if (d.type === 'message_edited' && d.room_id === state.activeRoomId) {
+        applyMessageEdit(d.message);
+      } else if (d.type === 'message_deleted' && d.room_id === state.activeRoomId) {
+        applyMessageDelete(d.message_id);
+      }
+    } catch (err) {
+      console.error('WS onmessage error:', err, d);
+    }
+  };
+
+  ws.onclose = () => {
+    if (state.ws !== ws) return;
+    state.ws = null;
+    if (!state.me || state.activeRoomId !== roomId) return;
+    // Exponential backoff: 500ms, 1s, 2s, 4s, capped at 8s
+    const delay = Math.min(500 * Math.pow(2, roomWsAttempts), 8000);
+    roomWsAttempts++;
+    clearTimeout(roomWsRetry);
+    roomWsRetry = setTimeout(() => {
+      if (state.me && state.activeRoomId === roomId) openWs(roomId);
+    }, delay);
+  };
+
+  ws.onerror = (e) => { /* close will fire next */ };
+}
+
+function openUserWs() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${proto}://${location.host}/ws/user?token=${encodeURIComponent(state.token)}`;
+  let ws;
+  try { ws = new WebSocket(url); } catch (e) { console.error('user WS open failed:', e); return; }
+  state.userWs = ws;
+
+  ws.onmessage = async (ev) => {
+    let d;
+    try { d = JSON.parse(ev.data); } catch { return; }
+    try {
+      if (d.type === 'new_message') {
+        const roomId = d.room_id;
+        const msg = d.message;
+        state.roomPreview[roomId] = msg;
+
+        if (roomId === state.activeRoomId) { renderRooms(); return; }
+        if (!state.rooms.find(r => r.id === roomId)) { await loadRooms(); return; }
+        if (msg.sender_id !== state.me.id) state.unread[roomId] = (state.unread[roomId] || 0) + 1;
+        renderRooms();
+
+      } else if (d.type === 'new_room') {
+        await loadRooms();
+      } else if (d.type === 'room_updated') {
+        const idx = state.rooms.findIndex(r => r.id === d.room_id);
+        if (idx >= 0) {
+          state.rooms[idx].name = d.name;
+          state.rooms[idx].display = d.display;
+          renderRooms();
+          if (state.activeRoomId === d.room_id) renderRoomHeader(state.rooms[idx]);
+        }
+      } else if (d.type === 'room_deleted' || d.type === 'room_removed') {
+        state.rooms = state.rooms.filter(r => r.id !== d.room_id);
+        delete state.unread[d.room_id];
+        delete state.roomPreview[d.room_id];
+        if (state.activeRoomId === d.room_id) deselectRoom();
+        renderRooms();
+      } else if (d.type === 'participant_left') {
+        const idx = state.rooms.findIndex(r => r.id === d.room_id);
+        if (idx >= 0) {
+          state.rooms[idx].participants = (state.rooms[idx].participants || []).filter(p => p.id !== d.user_id);
+          renderRooms();
+          if (state.activeRoomId === d.room_id) renderRoomHeader(state.rooms[idx]);
+        }
+      } else if (d.type === 'message_edited') {
+        if (state.roomPreview[d.room_id]?.id === d.message.id) {
+          state.roomPreview[d.room_id] = d.message;
+          renderRooms();
+        }
+      } else if (d.type === 'message_deleted') {
+        if (state.roomPreview[d.room_id]?.id === d.message_id) {
+          delete state.roomPreview[d.room_id];
+          renderRooms();
+        }
+      }
+    } catch (err) { console.error('user WS handler error:', err, d); }
+  };
+
+  ws.onclose = () => {
+    state.userWs = null;
+    if (state.me) setTimeout(() => { if (state.me && !state.userWs) openUserWs(); }, 2000);
+  };
+}
+
+/* =====================================================================
+   Read receipts
+   ===================================================================== */
+function sendMarkRead(id) {
+  if (!state.me || !state.activeRoomId) return;
+  fetch(`/api/rooms/${state.activeRoomId}/read`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + state.token,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ last_read_message_id: id }),
+  }).catch(err => console.warn('mark_read failed:', err));
+}
+
+function applyReadReceipt(readerId, lastId) {
+  for (const [id, entry] of state.msgEls) {
+    if (id > lastId) continue;
+    const data = entry.data;
+    if (data.sender_id === readerId) continue;
+    const set = new Set(data.read_by || []);
+    if (set.has(readerId)) continue;
+    set.add(readerId);
+    data.read_by = [...set];
+    renderTick(entry);
+  }
+}
+
+function renderTick(entry) {
+  const { tickEl, data } = entry;
+  if (!tickEl) return;
+  if (!state.me || data.sender_id !== state.me.id) { tickEl.textContent = ''; return; }
+  const reads = (data.read_by || []).filter(x => x !== state.me.id).length;
+  const others = state.activeOthers;
+  if (reads === 0) { tickEl.textContent = '✓'; tickEl.className = 'tick'; }
+  else if (others > 0 && reads >= others) { tickEl.textContent = '✓✓'; tickEl.className = 'tick read'; }
+  else { tickEl.textContent = '✓✓'; tickEl.className = 'tick some'; }
+}
+
+/* =====================================================================
+   Rendering messages
+   ===================================================================== */
+function scrollNearBottom() {
+  const box = $('messages');
+  return (box.scrollHeight - box.scrollTop - box.clientHeight) < 120;
+}
+
+function appendMessage(m, isLive) {
+  if (!m || m.id == null) return;
+  if (state.seenIds.has(m.id)) {
+    const e = state.msgEls.get(m.id);
+    if (e) { e.data.read_by = m.read_by || []; renderTick(e); }
+    return;
+  }
+  state.seenIds.add(m.id);
+
+  const box = $('messages');
+  const stick = !isLive || scrollNearBottom();
+
+  // date separator?
+  const day = m.timestamp ? dayKey(m.timestamp) : null;
+  if (day && day !== state.lastDayKey) {
+    box.appendChild(el('div', { class: 'day-sep' }, dayLabel(m.timestamp)));
+    state.lastDayKey = day;
+    state.lastMsgContext = null;
+  }
+
+  // grouping
+  const ctx = state.lastMsgContext;
+  const sameSender = ctx && ctx.sender_id === m.sender_id;
+  const withinWindow = ctx && m.timestamp && ctx.timestamp &&
+    (new Date(m.timestamp) - new Date(ctx.timestamp)) < 5 * 60 * 1000;
+  const grouped = sameSender && withinWindow;
+
+  const node = el('div', { class: 'msg' });
+  if (state.me && m.sender_id === state.me.id) node.classList.add('mine');
+  if (grouped) node.classList.add('grouped');
+
+  if (!(state.me && m.sender_id === state.me.id) && !grouped) {
+    const senderDisplayName = m.sender_display_name || m.sender || '?';
+    node.appendChild(el('div', { class: 'sender' }, senderDisplayName));
+  }
+
+  if (m.message) node.appendChild(el('div', { class: 'text' }, m.message));
+
+  const files = m.files || [];
+  if (files.length) {
+    const wrap = el('div', { class: 'files' });
+    for (const f of files) {
+      if (!f) continue;
+      const a = el('a', { class: 'file-chip', href: f.url || '#', target: '_blank', rel: 'noopener', title: f.name || '' });
+      if (isImage(f.name || '') && f.url) {
+        a.appendChild(el('img', { class: 'thumb', src: f.url, alt: '' }));
+      } else {
+        a.appendChild(el('span', { class: 'icon' }, fileIcon(f.name || '')));
+      }
+      const info = el('div', { class: 'info' });
+      info.appendChild(el('span', { class: 'name' }, f.name || 'file'));
+      if (f.size) info.appendChild(el('span', { class: 'size' }, humanSize(f.size)));
+      a.appendChild(info);
+      wrap.appendChild(a);
+    }
+    node.appendChild(wrap);
+  }
+
+  // meta
+  const meta = el('div', { class: 'msg-meta' });
+  if (m.edited_at) meta.appendChild(el('span', { class: 'edited' }, 'edited'));
+  meta.appendChild(el('span', {}, formatTime(m.timestamp)));
+  let tickEl = null;
+  if (state.me && m.sender_id === state.me.id) {
+    tickEl = el('span', { class: 'tick' });
+    meta.appendChild(tickEl);
+  }
+  node.appendChild(meta);
+
+  if (state.me && m.sender_id === state.me.id) {
+    node.appendChild(buildMessageActions(m.id));
+  }
+
+  box.appendChild(node);
+
+  if (stick) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+  else if (isLive && m.sender_id !== state.me.id) {
+    state.newWhileScrolled++;
+    updateScrollBtn();
+  }
+
+  const entry = { el: node, data: m, tickEl };
+  state.msgEls.set(m.id, entry);
+  renderTick(entry);
+
+  state.lastMsgContext = { sender_id: m.sender_id, timestamp: m.timestamp, day };
+}
+
+/* =====================================================================
+   Edit / delete
+   ===================================================================== */
+function buildMessageActions(messageId) {
+  const wrap = el('div', { class: 'msg-actions' });
+  const edit = el('button', { title: 'Edit' }, '✏️');
+  edit.addEventListener('click', (e) => { e.stopPropagation(); startEdit(messageId); });
+  wrap.appendChild(edit);
+  const del = el('button', { class: 'del', title: 'Delete' }, '🗑️');
+  del.addEventListener('click', (e) => { e.stopPropagation(); deleteMessage(messageId); });
+  wrap.appendChild(del);
+  return wrap;
+}
+
+function startEdit(messageId) {
+  const entry = state.msgEls.get(messageId);
+  if (!entry) return;
+  const textEl = entry.el.querySelector('.text');
+  if (!textEl) return;
+  const originalText = entry.data.message || '';
+
+  const wrapper = el('div', { class: 'edit-wrap' });
+  const textarea = el('textarea', { class: 'edit-input' });
+  textarea.value = originalText;
+  const hint = el('div', { class: 'edit-hint' });
+  hint.innerHTML = 'Press <kbd>Enter</kbd> to save · <kbd>Esc</kbd> to cancel';
+  wrapper.append(textarea, hint);
+  textEl.replaceWith(wrapper);
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  let done = false;
+  const commit = async () => {
+    if (done) return; done = true;
+    const newText = textarea.value.trim();
+    if (!newText || newText === originalText) { wrapper.replaceWith(textEl); return; }
+    try {
+      const updated = await api(
+        `/api/rooms/${state.activeRoomId}/messages/${messageId}`,
+        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: newText }) }
+      );
+      applyMessageEdit(updated);
+    } catch (err) {
+      toast('Edit failed: ' + err.message, 'error');
+      wrapper.replaceWith(textEl);
+    }
+  };
+  const cancel = () => { if (done) return; done = true; wrapper.replaceWith(textEl); };
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  textarea.addEventListener('blur', commit);
+}
+
+function applyMessageEdit(m) {
+  if (!m || m.id == null) return;
+  const entry = state.msgEls.get(m.id);
+  if (!entry) return;
+  entry.data = { ...entry.data, ...m };
+  const container = entry.el;
+  container.querySelectorAll('.text, .edit-wrap').forEach(el => el.remove());
+
+  if (m.message) {
+    const textEl = el('div', { class: 'text' }, m.message);
+    const ref = container.querySelector('.files') || container.querySelector('.msg-meta');
+    if (ref) container.insertBefore(textEl, ref);
+    else container.appendChild(textEl);
+  }
+
+  const meta = container.querySelector('.msg-meta');
+  if (meta && !meta.querySelector('.edited')) {
+    meta.insertBefore(el('span', { class: 'edited' }, 'edited'), meta.firstChild);
+  }
+}
+
+async function deleteMessage(messageId) {
+  const ok = await askConfirm('Delete this message for everyone?', { title: 'Delete message', okText: 'Delete', danger: true });
+  if (!ok) return;
+  try {
+    await api(`/api/rooms/${state.activeRoomId}/messages/${messageId}`, { method: 'DELETE' });
+    applyMessageDelete(messageId);
+  } catch (err) {
+    toast('Delete failed: ' + err.message, 'error');
+  }
+}
+
+function applyMessageDelete(messageId) {
+  const entry = state.msgEls.get(messageId);
+  if (!entry) return;
+  entry.el.remove();
+  state.msgEls.delete(messageId);
+  state.seenIds.delete(messageId);
+  if (state.roomPreview[state.activeRoomId]?.id === messageId) {
+    delete state.roomPreview[state.activeRoomId];
+    renderRooms();
+  }
+}
+
+/* =====================================================================
+   Sending — goes over HTTP for reliability
+   ===================================================================== */
+function autosize() {
+  const t = $('input');
+  t.style.height = 'auto';
+  t.style.height = Math.min(t.scrollHeight, 160) + 'px';
+}
+$('input').addEventListener('input', autosize);
+
+async function sendMessage() {
+  if (state.pendingSend) return;
+  if (!state.activeRoomId) { toast('No conversation selected', 'warn'); return; }
+
+  const text = $('input').value.trim();
+  const hasFiles = state.pendingFiles.length > 0;
+  if (!text && !hasFiles) return;
+
+  state.pendingSend = true;
+  const sendBtn = $('sendBtn');
+  sendBtn.disabled = true;
+
+  const filesBackup = [...state.pendingFiles];
+  const textBackup = text;
+
+  try {
+    const fd = new FormData();
+    if (text) fd.append('text', text);
+    for (const f of state.pendingFiles) fd.append('files', f);
+
+    // Clear UI immediately so it feels instant
+    $('input').value = '';
+    state.pendingFiles = [];
+    renderPreview();
+    autosize();
+
+    const res = await fetch(`/api/chat/${state.activeRoomId}/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + state.token },
+      body: fd,
+    });
+    if (!res.ok) {
+      let detail = '';
+      try { detail = await res.text(); } catch {}
+      throw new Error(`${res.status} ${detail || res.statusText}`);
+    }
+    const data = await res.json();
+    // Server broadcast will normally deliver this too; appendMessage dedupes.
+    if (data && data.message) appendMessage(data.message, true);
+  } catch (err) {
+    // Restore the input so the user can retry
+    $('input').value = textBackup;
+    state.pendingFiles = filesBackup;
+    renderPreview();
+    autosize();
+    toast('Send failed: ' + err.message, 'error');
+  } finally {
+    state.pendingSend = false;
+    sendBtn.disabled = false;
+    $('input').focus();
+  }
+}
+
+$('sendBtn').addEventListener('click', sendMessage);
+$('input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+/* =====================================================================
+   File preview
+   ===================================================================== */
+$('attachBtn').addEventListener('click', () => $('file').click());
+
+$('file').addEventListener('change', (e) => {
+  const incoming = [...e.target.files];
+  e.target.value = '';
+  if (state.pendingFiles.length + incoming.length > MAX_FILES) {
+    toast(`Max ${MAX_FILES} files per message.`, 'warn');
+    return;
+  }
+  state.pendingFiles.push(...incoming);
+  renderPreview();
+});
+
+function renderPreview() {
+  const p = $('preview');
+  p.innerHTML = '';
+  state.pendingFiles.forEach((f, i) => {
+    const chip = el('div', { class: 'chip' });
+    if (f.type && f.type.startsWith('image/')) {
+      try {
+        const url = URL.createObjectURL(f);
+        const img = el('img', { src: url });
+        img.onload = () => URL.revokeObjectURL(url);
+        chip.appendChild(img);
+      } catch {}
+    } else {
+      chip.appendChild(el('span', {}, fileIcon(f.name || '')));
+    }
+    chip.appendChild(el('span', { class: 'name' }, f.name || 'file'));
+    const x = el('button', { class: 'x', title: 'Remove' }, '×');
+    x.addEventListener('click', () => { state.pendingFiles.splice(i, 1); renderPreview(); });
+    chip.appendChild(x);
+    p.appendChild(chip);
+  });
+}
+
+/* =====================================================================
+   User picker / group name modals
+   ===================================================================== */
+async function pickUsers({ title, multi, preselectedIds = [] }) {
+  const modal = $('userSearchModal');
+  const titleEl = $('userSearchModalTitle');
+  const input = $('userSearchInput');
+  const results = $('userSearchResults');
+  const empty = $('userSearchEmpty');
+  const closeBtn = $('closeUserSearchModal');
+
+  state.userSearchMode = multi ? 'group' : 'dm';
+  state.selectedUserIds = new Set(preselectedIds);
+
+  titleEl.textContent = title;
+  input.value = '';
+  results.innerHTML = '';
+  empty.style.display = 'none';
+
+  return new Promise((resolve) => {
+    let searchDebounce = null;
+    let currentAbort = null;
+
+    async function doSearch(query) {
+      if (currentAbort) currentAbort.abort();
+      const controller = new AbortController();
+      currentAbort = controller;
+
+      results.innerHTML = '';
+      empty.style.display = 'none';
+
+      if (!query || query.length < 2) return;
+
+      try {
+        const users = await api('/api/users/search?q=' + encodeURIComponent(query), { 
+          signal: controller.signal 
+        });
+        renderResults(users);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Search failed:', err);
+        }
+      }
+    }
+
+    function renderResults(users) {
+      results.innerHTML = '';
+      if (!users.length) {
+        empty.style.display = 'block';
+        return;
+      }
+      for (const u of users) {
+        const row = el('div', { class: 'user-row' });
+        if (state.selectedUserIds.has(u.id)) row.classList.add('picked');
+        
+        const avatar = avatarFor(u.display_name || u.username, 36);
+        if (u.avatar_url) {
+          avatar.style.background = 'transparent';
+          avatar.innerHTML = `<img src="${u.avatar_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+        }
+        
+        const nameSpan = el('span', { class: 'name' }, u.display_name || u.username);
+        if (u.username !== (u.display_name || u.username)) {
+          nameSpan.appendChild(el('span', { style: 'margin-left:8px;font-size:11px;color:var(--fg-3)' }, '@' + u.username));
+        }
+        
+        row.append(avatar, nameSpan);
+        
+        row.addEventListener('click', () => {
+          if (state.userSearchMode === 'dm') {
+            // Single select for DM
+            state.selectedUserIds.clear();
+            results.querySelectorAll('.user-row').forEach(r => r.classList.remove('picked'));
+            state.selectedUserIds.add(u.id);
+            row.classList.add('picked');
+            resolve([u.id]);
+            closeModal();
+          } else {
+            // Multi select for group
+            if (state.selectedUserIds.has(u.id)) {
+              state.selectedUserIds.delete(u.id);
+              row.classList.remove('picked');
+            } else {
+              state.selectedUserIds.add(u.id);
+              row.classList.add('picked');
+            }
+          }
+        });
+        results.appendChild(row);
+      }
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      input.removeEventListener('input', onInput);
+      closeBtn.removeEventListener('click', onClose);
+      document.removeEventListener('keydown', escHandler);
+      currentAbort?.abort();
+    }
+
+    function onInput() {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => doSearch(input.value.trim()), 250);
+    }
+
+    function onClose() {
+      resolve(null);
+      closeModal();
+    }
+
+    const escHandler = (e) => {
+      if (e.key === 'Escape') { onClose(); }
+    };
+
+    input.addEventListener('input', onInput);
+    closeBtn.addEventListener('click', onClose);
+    document.addEventListener('keydown', escHandler);
+
+    // For group mode, we need a confirm button
+    if (multi) {
+      // Add confirm button to modal footer
+      let actions = modal.querySelector('.modal-actions');
+      if (!actions) {
+        actions = el('div', { class: 'modal-actions', style: 'margin-top:16px;padding-top:16px;border-top:1px solid var(--border)' });
+        const cancelBtn = el('button', { class: 'btn' }, 'Cancel');
+        const okBtn = el('button', { class: 'btn primary' }, 'Create Group');
+        cancelBtn.addEventListener('click', onClose);
+        okBtn.addEventListener('click', () => {
+          if (state.selectedUserIds.size === 0) {
+            toast('Select at least one user', 'warn');
+            return;
+          }
+          resolve([...state.selectedUserIds]);
+          closeModal();
+        });
+        actions.append(cancelBtn, okBtn);
+        modal.appendChild(actions);
+      }
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => input.focus(), 50);
+  });
+}
+
+function askGroupName(initial = '') {
+  return new Promise((resolve) => {
+    const back = el('div', { class: 'modal-back' });
+    const modal = el('div', { class: 'modal small' });
+    modal.appendChild(el('h2', {}, 'Name your group'));
+    const field = el('div', { class: 'field' });
+    field.appendChild(el('label', {}, 'Group name'));
+    const input = el('input', { value: initial, placeholder: 'e.g. Weekend trip', maxlength: 60 });
+    field.appendChild(input);
+    modal.appendChild(field);
+
+    const actions = el('div', { class: 'modal-actions' });
+    const cancelBtn = el('button', { class: 'btn' }, 'Cancel');
+    const okBtn = el('button', { class: 'btn primary' }, 'Continue');
+    cancelBtn.addEventListener('click', () => done(null));
+    okBtn.addEventListener('click', () => done(input.value.trim()));
+    actions.append(cancelBtn, okBtn);
+    modal.appendChild(actions);
+
+    back.appendChild(modal);
+    back.addEventListener('click', (e) => { if (e.target === back) done(null); });
+    document.body.appendChild(back);
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); done(input.value.trim()); }
+    });
+
+    function done(v) { back.remove(); resolve(v); }
+  });
+}
+
+/* =====================================================================
+   New DM / Group
+   ===================================================================== */
+$('newDmBtn').addEventListener('click', async () => {
+  const ids = await pickUsers({ title: 'Start a direct message', multi: false });
+  if (!ids?.length) return;
+  try {
+    const room = await api('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'direct', participant_ids: ids }),
+    });
+    await loadRooms();
+    selectRoom(room.id);
+  } catch (err) { toast('Could not create DM: ' + err.message, 'error'); }
+});
+
+$('newGroupBtn').addEventListener('click', async () => {
+  const name = await askGroupName('New group');
+  if (!name) return;
+  const ids = await pickUsers({ title: 'Add members', multi: true });
+  if (!ids?.length) return;
+  try {
+    const room = await api('/api/rooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'group', name, participant_ids: ids }),
+    });
+    await loadRooms();
+    selectRoom(room.id);
+  } catch (err) { toast('Could not create group: ' + err.message, 'error'); }
+});
+
+/* =====================================================================
+   Group actions
+   ===================================================================== */
+async function renameGroupFlow(room) {
+  const current = state.rooms.find(r => r.id === room.id);
+  const newName = await askGroupName(current.name || current.display);
+  if (!newName || newName === current.name) return;
+  try {
+    const updated = await api(`/api/rooms/${room.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName }),
+    });
+    const idx = state.rooms.findIndex(r => r.id === updated.id);
+    if (idx >= 0) state.rooms[idx] = { ...state.rooms[idx], ...updated };
+    renderRooms();
+    if (idx >= 0) renderRoomHeader(state.rooms[idx]);
+    toast('Group renamed', 'success');
+  } catch (err) { toast('Rename failed: ' + err.message, 'error'); }
+}
+
+async function deleteGroupFlow(room) {
+  const ok = await askConfirm('Delete this group for everyone? This cannot be undone.',
+    { title: 'Delete group', okText: 'Delete', danger: true });
+  if (!ok) return;
+  try {
+    await api(`/api/rooms/${room.id}`, { method: 'DELETE' });
+    state.rooms = state.rooms.filter(r => r.id !== room.id);
+    delete state.unread[room.id];
+    delete state.roomPreview[room.id];
+    if (state.activeRoomId === room.id) deselectRoom();
+    renderRooms();
+    toast('Group deleted', 'success');
+  } catch (err) { toast('Delete failed: ' + err.message, 'error'); }
+}
+
+async function leaveGroupFlow(room) {
+  const ok = await askConfirm('Leave this group?', { title: 'Leave group', okText: 'Leave', danger: true });
+  if (!ok) return;
+  try {
+    await api(`/api/rooms/${room.id}/leave`, { method: 'POST' });
+    state.rooms = state.rooms.filter(r => r.id !== room.id);
+    delete state.unread[room.id];
+    delete state.roomPreview[room.id];
+    if (state.activeRoomId === room.id) deselectRoom();
+    renderRooms();
+    toast('You left the group', 'success');
+  } catch (err) { toast('Leave failed: ' + err.message, 'error'); }
+}
+
+/* =====================================================================
+   Scroll button
+   ===================================================================== */
+$('messages').addEventListener('scroll', updateScrollBtn);
+
+function updateScrollBtn() {
+  const btn = $('scrollBtn');
+  const box = $('messages');
+  if (!box) return;
+  const fromBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
+  if (fromBottom > 240) btn.classList.add('show');
+  else { btn.classList.remove('show'); state.newWhileScrolled = 0; }
+  const count = $('scrollCount');
+  if (state.newWhileScrolled > 0) {
+    count.style.display = '';
+    count.textContent = state.newWhileScrolled > 99 ? '99+' : String(state.newWhileScrolled);
+  } else count.style.display = 'none';
+}
+
+$('scrollBtn').addEventListener('click', () => {
+  const box = $('messages');
+  box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+  state.newWhileScrolled = 0;
+  updateScrollBtn();
+});
+
+/* =====================================================================
+   Global shortcuts
+   ===================================================================== */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.menu-pop').forEach(x => x.remove());
+});
+
+/* =====================================================================
+   Profile & Edit Profile Modals
+   ===================================================================== */
+
+// Profile modal elements
+const profileModal = $('userProfileModal');
+const editProfileModal = $('editProfileModal');
+const closeProfileBtn = $('closeUserProfileModal');
+const closeEditProfileBtn = $('closeEditProfileModal');
+const openEditProfileBtn = $('openEditProfileBtn');
+const cancelEditProfileBtn = $('cancelEditProfile');
+const startDmFromProfileBtn = $('startDmFromProfileBtn');
+const editProfileForm = $('editProfileForm');
+const bioCharCount = $('bioCharCount');
+
+let currentProfileUserId = null;
+
+// Open profile modal
+async function openUserProfile(userId) {
+  currentProfileUserId = userId;
+  const isMe = userId === state.me.id;
+  
+  try {
+    const endpoint = isMe ? '/api/me/profile' : `/api/users/${userId}/profile`;
+    const profile = await api(endpoint);
+    
+    // Populate profile modal
+    const avatar = $('profileAvatar');
+    avatar.textContent = (profile.display_name || profile.username)[0].toUpperCase();
+    avatar.style.background = userColor(profile.username);
+    if (profile.avatar_url) {
+      avatar.style.background = 'transparent';
+      avatar.innerHTML = `<img src="${profile.avatar_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    }
+    
+    $('profileDisplayName').textContent = profile.display_name || profile.username;
+    $('profileUsername').textContent = '@' + profile.username;
+    $('profileBio').textContent = profile.bio || 'No bio yet';
+    $('profileBio').style.display = profile.bio ? '' : 'none';
+    
+    if (profile.created_at) {
+      const date = new Date(profile.created_at);
+      $('profileJoined').textContent = 'Joined ' + date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    } else {
+      $('profileJoined').textContent = '';
+    }
+    
+    // Show/hide buttons based on if it's own profile
+    openEditProfileBtn.style.display = isMe ? '' : 'none';
+    startDmFromProfileBtn.style.display = isMe ? 'none' : '';
+    startDmFromProfileBtn.textContent = 'Message';
+    
+    // Set up start DM button
+    startDmFromProfileBtn.onclick = async () => {
+      if (!currentProfileUserId) return;
+      try {
+        const room = await api('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'direct', participant_ids: [currentProfileUserId] }),
+        });
+        closeProfileModal();
+        await loadRooms();
+        selectRoom(room.id);
+      } catch (err) {
+        toast('Could not start DM: ' + err.message, 'error');
+      }
+    };
+    
+    profileModal.classList.remove('hidden');
+  } catch (err) {
+    toast('Could not load profile: ' + err.message, 'error');
+  }
+}
+
+function closeProfileModal() {
+  profileModal.classList.add('hidden');
+  currentProfileUserId = null;
+}
+
+// Open edit profile modal
+function openEditProfileModal() {
+  closeProfileModal();
+  
+  // Populate with current user's profile
+  const profile = state.me;
+  $('editDisplayName').value = profile.display_name || '';
+  $('editBio').value = profile.bio || '';
+  $('editAvatarUrl').value = profile.avatar_url || '';
+  updateBioCharCount();
+  
+  editProfileModal.classList.remove('hidden');
+  setTimeout(() => $('editDisplayName').focus(), 50);
+}
+
+function closeEditProfileModal() {
+  editProfileModal.classList.add('hidden');
+}
+
+function updateBioCharCount() {
+  const bio = $('editBio').value;
+  bioCharCount.textContent = `${bio.length}/500`;
+  bioCharCount.style.color = bio.length > 450 ? 'var(--warn)' : 'var(--fg-3)';
+}
+
+// Profile modal close buttons
+closeProfileBtn.addEventListener('click', closeProfileModal);
+closeEditProfileBtn.addEventListener('click', closeEditProfileModal);
+cancelEditProfileBtn.addEventListener('click', closeEditProfileModal);
+
+// Profile modal backdrop clicks
+profileModal.addEventListener('click', (e) => {
+  if (e.target === profileModal) closeProfileModal();
+});
+editProfileModal.addEventListener('click', (e) => {
+  if (e.target === editProfileModal) closeEditProfileModal();
+});
+
+// Bio character count
+$('editBio').addEventListener('input', updateBioCharCount);
+
+// Open edit profile from profile modal
+openEditProfileBtn.addEventListener('click', openEditProfileModal);
+
+// My profile button in sidebar
+$('profileBtn').addEventListener('click', () => openUserProfile(state.me.id));
+
+// Edit profile form submit
+editProfileForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const displayName = $('editDisplayName').value.trim() || null;
+  const bio = $('editBio').value.trim() || null;
+  const avatarUrl = $('editAvatarUrl').value.trim() || null;
+  
+  const btn = editProfileForm.querySelector('button[type=submit]');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  
+  try {
+    const updated = await api('/api/me/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name: displayName, bio, avatar_url: avatarUrl }),
+    });
+    
+    // Update local state
+    state.me.display_name = updated.display_name;
+    state.me.bio = updated.bio;
+    state.me.avatar_url = updated.avatar_url;
+    
+    // Update UI
+    const avatar = $('meAvatar');
+    avatar.textContent = (updated.display_name || updated.username)[0].toUpperCase();
+    avatar.style.background = userColor(updated.username);
+    if (updated.avatar_url) {
+      avatar.style.background = 'transparent';
+      avatar.innerHTML = `<img src="${updated.avatar_url}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`;
+    }
+    $('meName').textContent = updated.display_name || updated.username;
+    
+    closeEditProfileModal();
+    toast('Profile updated', 'success');
+  } catch (err) {
+    toast('Failed to update profile: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+});
+
+// Escape key handling for profile modals
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!profileModal.classList.contains('hidden')) closeProfileModal();
+    if (!editProfileModal.classList.contains('hidden')) closeEditProfileModal();
+  }
+});
+
+/* =====================================================================
+   Boot
+   ===================================================================== */
+(async () => {
+  const saved = sessionStorage.getItem(TOKEN_KEY);
+  if (!saved) return;
+  try {
+    const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + saved } });
+    if (!res.ok) throw new Error();
+    state.me = await res.json();
+    state.token = saved;
+    showApp();
+  } catch {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+})();
+</script>
+</body>
+</html>

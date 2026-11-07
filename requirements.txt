@@ -1,0 +1,15 @@
+fastapi==0.142.2
+uvicorn[standard]==0.30.0
+sqlalchemy==2.1.4
+aiosqlite==0.22.1
+pydantic==2.13.5
+python-multipart==0.0.32
+python-dotenv==1.2.4
+redis==5.0.1
+httptools==0.8.0
+bcrypt==4.1.2
+email-validator==2.2.0
+
+# Test-only dependencies (for test_integration.py)
+# httpx
+# websockets
